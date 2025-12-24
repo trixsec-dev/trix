@@ -90,6 +90,12 @@ go build -o trix .
 sudo mv trix /usr/local/bin/
 ```
 
+**Container image:**
+
+```bash
+docker run --rm -v ~/.kube:/home/nonroot/.kube:ro ghcr.io/davealtena/trix:latest status
+```
+
 **Verify installation:**
 
 ```bash
@@ -239,11 +245,10 @@ trix ask "..." --model claude-sonnet-4-20250514
 
 ## Contributing
 
-Contributions are welcome! Please feel free to:
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 - [Open an issue](https://github.com/davealtena/trix/issues) for bugs or feature requests
 - [Start a discussion](https://github.com/davealtena/trix/discussions) for questions or ideas
-- Submit a pull request
 
 ## License
 
