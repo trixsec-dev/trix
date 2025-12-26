@@ -182,8 +182,14 @@ Use natural language to investigate your cluster's security posture. trix uses A
 ### Setup
 
 ```bash
+# Option 1: Anthropic Claude
 export ANTHROPIC_API_KEY=your-key-here
+
+# Option 2: OpenAI GPT
+export OPENAI_API_KEY=your-key-here
 ```
+
+trix auto-detects which provider to use based on available API keys.
 
 ### Ask Questions
 
@@ -226,18 +232,19 @@ Update the golang.org/x/crypto package to version 0.31.0 or later...
 | Provider | Status | Environment Variable |
 |----------|--------|---------------------|
 | Anthropic (Claude) | Supported | `ANTHROPIC_API_KEY` |
-| OpenAI | Planned | - |
+| OpenAI (GPT-4) | Supported | `OPENAI_API_KEY` |
 | Ollama (local) | Planned | - |
 
-Use `--model` to specify a model:
+Use `--provider` to explicitly select a provider:
 
 ```bash
-trix ask "..." --model claude-sonnet-4-20250514
+trix ask "..." --provider openai
+trix ask "..." --provider anthropic
 ```
 
 ## Roadmap
 
-- **Multi-LLM Support** - OpenAI, Ollama (local models)
+- **Local LLM Support** - Ollama for air-gapped environments
 - **Agent Mode** - Scheduled alerts and automated security reports
 - **Helm Chart** - Easy deployment and configuration
 - **More Security Tools** - Kubescape, Kyverno, Falco integrations

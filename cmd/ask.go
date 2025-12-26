@@ -15,6 +15,7 @@ import (
 
 var (
 	llmModel    string
+	llmProvider string
 	interactive bool
 	renderer    *glamour.TermRenderer
 )
@@ -30,7 +31,7 @@ Examples:
   trix ask "Which pods are most at risk?"
   trix ask "Explain CVE-2024-1234 and how to fix it"
 
-Requires ANTHROPIC_API_KEY environment variable.`,
+Requires ANTHROPIC_API_KEY or OPENAI_API_KEY environment variable.`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		question := strings.Join(args, " ")
@@ -45,11 +46,10 @@ Requires ANTHROPIC_API_KEY environment variable.`,
 			renderer = nil // Fall back to plain text
 		}
 
-		// Create LLM client
-		client, err := llm.NewAnthropicClient(llmModel)
+		// Create LLM client based on provider flag or auto-detect
+		client, err := createLLMClient()
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
-			fmt.Println("Set ANTHROPIC_API_KEY environment variable to use this command.")
 			return
 		}
 
@@ -113,8 +113,34 @@ Requires ANTHROPIC_API_KEY environment variable.`,
 
 func init() {
 	rootCmd.AddCommand(askCmd)
-	askCmd.Flags().StringVar(&llmModel, "model", "", "LLM model to use (default: claude-sonnet-4-20250514)")
+	askCmd.Flags().StringVar(&llmModel, "model", "", "LLM model to use")
+	askCmd.Flags().StringVar(&llmProvider, "provider", "", "LLM provider: anthropic, openai (auto-detects if not set)")
 	askCmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "Interactive mode for follow-up questions")
+}
+
+// createLLMClient creates an LLM client based on --provider flag or auto-detects from env vars
+func createLLMClient() (llm.Client, error) {
+	provider := llmProvider
+
+	// Auto-detect provider if not specified
+	if provider == "" {
+		if os.Getenv("ANTHROPIC_API_KEY") != "" {
+			provider = "anthropic"
+		} else if os.Getenv("OPENAI_API_KEY") != "" {
+			provider = "openai"
+		} else {
+			return nil, fmt.Errorf("no API key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY")
+		}
+	}
+
+	switch provider {
+	case "anthropic":
+		return llm.NewAnthropicClient(llmModel)
+	case "openai":
+		return llm.NewOpenAIClient()
+	default:
+		return nil, fmt.Errorf("unknown provider: %s (use 'anthropic' or 'openai')", provider)
+	}
 }
 
 // printResponse renders markdown response to terminal
