@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/davealtena/trix/internal/k8s"
-	"github.com/davealtena/trix/internal/trivy"
+	"github.com/davealtena/trix/internal/tools/kubectl"
+	"github.com/davealtena/trix/internal/tools/trivy"
 	"github.com/spf13/cobra"
 )
 
@@ -52,7 +52,7 @@ var queryVulnsCmd = &cobra.Command{
 	Use:   "vulns",
 	Short: "List vulnerability reports from Trivy Operator",
 	Run: func(cmd *cobra.Command, args []string) {
-		k8sClient, err := k8s.NewClient()
+		k8sClient, err := kubectl.NewClient()
 		if err != nil {
 			fmt.Printf("Error creating K8s client: %v\n", err)
 			return
@@ -183,7 +183,7 @@ var queryComplianceCmd = &cobra.Command{
 	Use:   "compliance",
 	Short: "List compliance reports from Trivy Operator",
 	Run: func(cmd *cobra.Command, args []string) {
-		k8sClient, err := k8s.NewClient()
+		k8sClient, err := kubectl.NewClient()
 		if err != nil {
 			fmt.Printf("Error creating K8s client: %v\n", err)
 			return
@@ -314,7 +314,7 @@ var queryFindingsCmd = &cobra.Command{
 	Use:   "findings",
 	Short: "Query all security findings (unified view)",
 	Run: func(cmd *cobra.Command, args []string) {
-		k8sClient, err := k8s.NewClient()
+		k8sClient, err := kubectl.NewClient()
 		if err != nil {
 			fmt.Printf("Error creating k8s client: %v\n", err)
 			return
@@ -407,7 +407,7 @@ var querySummaryCmd = &cobra.Command{
 	Use:   "summary",
 	Short: "Show aggregated security findings summary",
 	Run: func(cmd *cobra.Command, args []string) {
-		k8sClient, err := k8s.NewClient()
+		k8sClient, err := kubectl.NewClient()
 		if err != nil {
 			fmt.Printf("Error creating k8s client: %v\n", err)
 			return
@@ -547,7 +547,7 @@ var queryNetworkCmd = &cobra.Command{
 	Use:   "network",
 	Short: "Analyze NetworkPolicy coverage",
 	Run: func(cmd *cobra.Command, args []string) {
-		k8sClient, err := k8s.NewClient()
+		k8sClient, err := kubectl.NewClient()
 		if err != nil {
 			fmt.Printf("Error creating k8s client: %v\n", err)
 			return
@@ -588,7 +588,7 @@ var querySbomCmd = &cobra.Command{
 	Use:   "sbom",
 	Short: "List software components from SBOM reports",
 	Run: func(cmd *cobra.Command, args []string) {
-		k8sClient, err := k8s.NewClient()
+		k8sClient, err := kubectl.NewClient()
 		if err != nil {
 			fmt.Printf("Error creating K8s client: %v\n", err)
 			return

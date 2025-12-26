@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/davealtena/trix/internal/k8s"
-	"github.com/davealtena/trix/internal/trivy"
+	"github.com/davealtena/trix/internal/tools/kubectl"
+	"github.com/davealtena/trix/internal/tools/trivy"
 	"github.com/spf13/cobra"
 )
 
@@ -90,7 +90,7 @@ var scanAllCmd = &cobra.Command{
 }
 
 func runScan(scanType string) {
-	k8sClient, err := k8s.NewClient()
+	k8sClient, err := kubectl.NewClient()
 	if err != nil {
 		fmt.Printf("Error creating k8s client: %v\n", err)
 		return

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/glamour"
-	"github.com/davealtena/trix/internal/chat"
+	"github.com/davealtena/trix/internal/agent"
 	"github.com/davealtena/trix/internal/llm"
 	"github.com/spf13/cobra"
 )
@@ -54,7 +54,7 @@ Requires ANTHROPIC_API_KEY or OPENAI_API_KEY environment variable.`,
 		}
 
 		// Create agent and ask
-		a := chat.New(client)
+		a := agent.New(client)
 		ctx := context.Background()
 
 		if interactive {

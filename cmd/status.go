@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/davealtena/trix/internal/k8s"
-	"github.com/davealtena/trix/internal/trivy"
+	"github.com/davealtena/trix/internal/tools/kubectl"
+	"github.com/davealtena/trix/internal/tools/trivy"
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +14,7 @@ var statusCmd = &cobra.Command{
 	Short: "Check status of security tools in the cluster",
 	Long:  `Verify that Trivy Operator and other security tools are installed and working.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		k8sClient, err := k8s.NewClient()
+		k8sClient, err := kubectl.NewClient()
 		if err != nil {
 			fmt.Printf("Error creating k8s client: %v\n", err)
 			return

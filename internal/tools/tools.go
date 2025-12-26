@@ -8,9 +8,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/davealtena/trix/internal/exposure"
-	"github.com/davealtena/trix/internal/k8s"
 	"github.com/davealtena/trix/internal/llm"
+	"github.com/davealtena/trix/internal/tools/exposure"
+	"github.com/davealtena/trix/internal/tools/kubectl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -619,7 +619,7 @@ func (r *Registry) checkExposure(ctx context.Context, params map[string]interfac
 	}
 
 	// Create k8s client
-	client, err := k8s.NewClient()
+	client, err := kubectl.NewClient()
 	if err != nil {
 		return "", fmt.Errorf("failed to create k8s client: %w", err)
 	}
@@ -656,7 +656,7 @@ func (r *Registry) checkExposure(ctx context.Context, params map[string]interfac
 }
 
 // getWorkloadLabels fetches the pod template labels for a workload
-func (r *Registry) getWorkloadLabels(ctx context.Context, client *k8s.Client, kind, name, namespace string) (map[string]string, error) {
+func (r *Registry) getWorkloadLabels(ctx context.Context, client *kubectl.Client, kind, name, namespace string) (map[string]string, error) {
 	clientset := client.Clientset()
 
 	switch kind {
