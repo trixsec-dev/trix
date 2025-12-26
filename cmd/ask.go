@@ -124,9 +124,14 @@ func createLLMClient() (llm.Client, error) {
 
 	// Auto-detect provider if not specified
 	if provider == "" {
-		if os.Getenv("ANTHROPIC_API_KEY") != "" {
+		hasAnthropic := os.Getenv("ANTHROPIC_API_KEY") != ""
+		hasOpenAI := os.Getenv("OPENAI_API_KEY") != ""
+
+		if hasAnthropic && hasOpenAI {
+			return nil, fmt.Errorf("both ANTHROPIC_API_KEY and OPENAI_API_KEY are set. Use --provider to choose")
+		} else if hasAnthropic {
 			provider = "anthropic"
-		} else if os.Getenv("OPENAI_API_KEY") != "" {
+		} else if hasOpenAI {
 			provider = "openai"
 		} else {
 			return nil, fmt.Errorf("no API key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY")
@@ -137,7 +142,7 @@ func createLLMClient() (llm.Client, error) {
 	case "anthropic":
 		return llm.NewAnthropicClient(llmModel)
 	case "openai":
-		return llm.NewOpenAIClient()
+		return llm.NewOpenAIClient(llmModel)
 	default:
 		return nil, fmt.Errorf("unknown provider: %s (use 'anthropic' or 'openai')", provider)
 	}

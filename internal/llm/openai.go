@@ -10,13 +10,18 @@ import (
 
 // OpenAIClient implements the Client interface for OpenAI's Chat API.
 type OpenAIClient struct {
+	model  string
 	client openai.Client
 }
 
 // NewOpenAIClient creates a new OpenAI client.
 // It reads the API key from the OPENAI_API_KEY environment variable.
-func NewOpenAIClient() (*OpenAIClient, error) {
+func NewOpenAIClient(model string) (*OpenAIClient, error) {
+	if model == "" {
+		model = "gpt-4o"
+	}
 	return &OpenAIClient{
+		model:  model,
 		client: openai.NewClient(),
 	}, nil
 }
@@ -28,7 +33,7 @@ func (c *OpenAIClient) Chat(ctx context.Context, messages []Message, tools []Too
 
 	params := openai.ChatCompletionNewParams{
 		Messages: openaiMessages,
-		Model:    "gpt-4o",
+		Model:    c.model,
 	}
 	if len(openaiTools) > 0 {
 		params.Tools = openaiTools
