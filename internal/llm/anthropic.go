@@ -114,13 +114,32 @@ func (c *AnthropicClient) convertTools(tools []Tool) []anthropic.ToolUnionParam 
 	var result []anthropic.ToolUnionParam
 
 	for _, tool := range tools {
+		inputSchema := anthropic.ToolInputSchemaParam{
+			Type: "object",
+		}
+
+		// Extract properties from the full JSON schema
+		if props, ok := tool.Parameters["properties"].(map[string]any); ok {
+			inputSchema.Properties = props
+		}
+
+		// Extract required fields
+		if req, ok := tool.Parameters["required"].([]string); ok {
+			inputSchema.Required = req
+		} else if req, ok := tool.Parameters["required"].([]any); ok {
+			// Handle []any case (common from JSON unmarshaling)
+			for _, r := range req {
+				if s, ok := r.(string); ok {
+					inputSchema.Required = append(inputSchema.Required, s)
+				}
+			}
+		}
+
 		result = append(result, anthropic.ToolUnionParam{
 			OfTool: &anthropic.ToolParam{
 				Name:        tool.Name,
 				Description: anthropic.String(tool.Description),
-				InputSchema: anthropic.ToolInputSchemaParam{
-					Properties: tool.Parameters,
-				},
+				InputSchema: inputSchema,
 			},
 		})
 	}
