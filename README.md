@@ -187,9 +187,12 @@ export ANTHROPIC_API_KEY=your-key-here
 
 # Option 2: OpenAI GPT
 export OPENAI_API_KEY=your-key-here
+
+# Option 3: Ollama (local, experimental)
+export OLLAMA_HOST=http://localhost:11434
 ```
 
-trix auto-detects which provider to use based on available API keys.
+trix auto-detects which provider to use based on available environment variables.
 
 ### Ask Questions
 
@@ -233,19 +236,40 @@ Update the golang.org/x/crypto package to version 0.31.0 or later...
 |----------|--------|---------------------|
 | Anthropic (Claude) | Supported | `ANTHROPIC_API_KEY` |
 | OpenAI (GPT-4) | Supported | `OPENAI_API_KEY` |
-| Ollama (local) | Planned | - |
+| Ollama (local) | Experimental | `OLLAMA_HOST` |
 
 Use `--provider` to explicitly select a provider:
 
 ```bash
-trix ask "..." --provider openai
 trix ask "..." --provider anthropic
+trix ask "..." --provider openai
+trix ask "..." --provider ollama --model llama3.1:8b
 ```
+
+#### Ollama (Experimental)
+
+Ollama support allows running trix with local LLMs for air-gapped environments. Note that local models have limited multi-step tool calling capability compared to hosted models.
+
+```bash
+# Start Ollama
+ollama serve
+
+# Pull a model
+ollama pull llama3.1:8b
+
+# Use with trix
+export OLLAMA_HOST=http://localhost:11434
+trix ask "What vulnerabilities are in my cluster?" --provider ollama
+
+# Or specify model explicitly
+trix ask "..." --provider ollama --model qwen2.5:14b --ollama-url http://localhost:11434
+```
+
+Recommended models for tool calling: `llama3.1:8b`, `qwen2.5:14b`, `mistral`
 
 ## Roadmap
 
-- **Local LLM Support** - Ollama for air-gapped environments
-- **Agent Mode** - Scheduled alerts and automated security reports
+- **Server Mode** - REST API for in-cluster deployment
 - **Helm Chart** - Easy deployment and configuration
 - **More Security Tools** - Kubescape, Kyverno, Falco integrations
 - **Webhook Integrations** - Slack, Teams, PagerDuty notifications

@@ -16,6 +16,7 @@ import (
 var (
 	llmModel    string
 	llmProvider string
+	ollamaURL   string
 	interactive bool
 	renderer    *glamour.TermRenderer
 )
@@ -31,7 +32,10 @@ Examples:
   trix ask "Which pods are most at risk?"
   trix ask "Explain CVE-2024-1234 and how to fix it"
 
-Requires ANTHROPIC_API_KEY or OPENAI_API_KEY environment variable.`,
+Providers:
+  anthropic  - Requires ANTHROPIC_API_KEY
+  openai     - Requires OPENAI_API_KEY
+  ollama     - Local/remote Ollama (set OLLAMA_HOST or use --ollama-url)`,
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		question := strings.Join(args, " ")
@@ -114,7 +118,8 @@ Requires ANTHROPIC_API_KEY or OPENAI_API_KEY environment variable.`,
 func init() {
 	rootCmd.AddCommand(askCmd)
 	askCmd.Flags().StringVar(&llmModel, "model", "", "LLM model to use")
-	askCmd.Flags().StringVar(&llmProvider, "provider", "", "LLM provider: anthropic, openai (auto-detects if not set)")
+	askCmd.Flags().StringVar(&llmProvider, "provider", "", "LLM provider: anthropic, openai, ollama (auto-detects if not set)")
+	askCmd.Flags().StringVar(&ollamaURL, "ollama-url", "", "Ollama server URL (default: http://localhost:11434)")
 	askCmd.Flags().BoolVarP(&interactive, "interactive", "i", false, "Interactive mode for follow-up questions")
 }
 
@@ -126,15 +131,28 @@ func createLLMClient() (llm.Client, error) {
 	if provider == "" {
 		hasAnthropic := os.Getenv("ANTHROPIC_API_KEY") != ""
 		hasOpenAI := os.Getenv("OPENAI_API_KEY") != ""
+		hasOllama := os.Getenv("OLLAMA_HOST") != "" || ollamaURL != ""
 
-		if hasAnthropic && hasOpenAI {
-			return nil, fmt.Errorf("both ANTHROPIC_API_KEY and OPENAI_API_KEY are set. Use --provider to choose")
-		} else if hasAnthropic {
+		// Count how many providers are available
+		count := 0
+		if hasAnthropic {
+			count++
 			provider = "anthropic"
-		} else if hasOpenAI {
+		}
+		if hasOpenAI {
+			count++
 			provider = "openai"
-		} else {
-			return nil, fmt.Errorf("no API key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY")
+		}
+		if hasOllama {
+			count++
+			provider = "ollama"
+		}
+
+		if count > 1 {
+			return nil, fmt.Errorf("multiple providers available. Use --provider to choose (anthropic, openai, ollama)")
+		}
+		if count == 0 {
+			return nil, fmt.Errorf("no provider configured. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or OLLAMA_HOST")
 		}
 	}
 
@@ -143,8 +161,10 @@ func createLLMClient() (llm.Client, error) {
 		return llm.NewAnthropicClient(llmModel)
 	case "openai":
 		return llm.NewOpenAIClient(llmModel)
+	case "ollama":
+		return llm.NewOllamaClient(ollamaURL, llmModel)
 	default:
-		return nil, fmt.Errorf("unknown provider: %s (use 'anthropic' or 'openai')", provider)
+		return nil, fmt.Errorf("unknown provider: %s (use 'anthropic', 'openai', or 'ollama')", provider)
 	}
 }
 
