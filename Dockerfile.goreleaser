@@ -1,0 +1,7 @@
+FROM gcr.io/distroless/static-debian12:nonroot
+
+COPY trix /trix
+
+USER nonroot:nonroot
+
+ENTRYPOINT ["/trix"]
