@@ -6,6 +6,7 @@ require (
 	github.com/anthropics/anthropic-sdk-go v1.19.0
 	github.com/charmbracelet/glamour v0.10.0
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
+	github.com/lib/pq v1.10.9
 	github.com/openai/openai-go v1.12.0
 	github.com/spf13/cobra v1.10.2
 	k8s.io/api v0.35.0

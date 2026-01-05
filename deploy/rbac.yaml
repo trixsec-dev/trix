@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: trix-server
+  namespace: trix-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trix-server
+rules:
+  # Trivy Operator CRDs
+  - apiGroups: ["aquasecurity.github.io"]
+    resources:
+      - vulnerabilityreports
+      - clustervulnerabilityreports
+      - configauditreports
+      - clusterconfigauditreports
+      - rbacassessmentreports
+      - clusterrbacassessmentreports
+      - infraassessmentreports
+      - clusterinfraassessmentreports
+      - exposedsecretreports
+      - sbomreports
+      - clustersbomreports
+      - clustercompliancereports
+    verbs: ["get", "list", "watch"]
+  # Core resources for exposure analysis
+  - apiGroups: [""]
+    resources: ["services", "pods", "namespaces"]
+    verbs: ["get", "list"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "networkpolicies"]
+    verbs: ["get", "list"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways", "httproutes", "grpcroutes", "tcproutes", "udproutes"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: trix-server
+subjects:
+  - kind: ServiceAccount
+    name: trix-server
+    namespace: trix-system
+roleRef:
+  kind: ClusterRole
+  name: trix-server
+  apiGroup: rbac.authorization.k8s.io

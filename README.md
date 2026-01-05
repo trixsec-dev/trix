@@ -19,6 +19,7 @@
     <a href="#installation"><strong>Installation</strong></a> |
     <a href="#usage"><strong>Usage</strong></a> |
     <a href="#ai-powered-investigation"><strong>AI Investigation</strong></a> |
+    <a href="#server-mode"><strong>Server Mode</strong></a> |
     <a href="#roadmap"><strong>Roadmap</strong></a>
   </p>
 </div>
@@ -29,6 +30,7 @@
 
 - **Query Security Findings** - Browse vulnerabilities, compliance issues, RBAC problems, and exposed secrets
 - **AI-Powered Investigation** - Ask questions in natural language and get actionable remediation advice
+- **Continuous Monitoring** - Server mode with Slack/webhook notifications for new and fixed vulnerabilities
 - **SBOM Search** - Find specific packages across all container images (e.g., log4j)
 - **NetworkPolicy Analysis** - Identify pods without network protection
 - **Interactive Mode** - Have follow-up conversations about your security posture
@@ -274,12 +276,41 @@ trix ask "..." --provider ollama --model qwen2.5:14b --ollama-url http://localho
 
 Recommended models for tool calling: `llama3.1:8b`, `qwen2.5:14b`, `mistral`
 
+## Server Mode
+
+Run trix as a long-running service that continuously monitors your cluster and sends notifications when vulnerabilities are discovered or fixed.
+
+```bash
+trix serve
+```
+
+### Features
+
+- Polls Trivy Operator CRDs at configurable intervals
+- Tracks vulnerability lifecycle (new/fixed) in PostgreSQL
+- Sends Slack notifications grouped by workload
+- Health endpoints for Kubernetes probes
+
+### Deployment
+
+See [deploy/README.md](deploy/README.md) for Kubernetes deployment with Kustomize.
+
+### Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `TRIX_DATABASE_URL` | PostgreSQL connection string | required |
+| `TRIX_POLL_INTERVAL` | How often to poll | `5m` |
+| `TRIX_NAMESPACES` | Namespaces to watch (comma-separated) | all |
+| `TRIX_NOTIFY_SLACK` | Slack incoming webhook URL | - |
+| `TRIX_NOTIFY_WEBHOOK` | Generic webhook URL | - |
+| `TRIX_NOTIFY_SEVERITY` | Minimum severity to notify | `CRITICAL` |
+
 ## Roadmap
 
-- **Server Mode** - REST API for in-cluster deployment
 - **Helm Chart** - Easy deployment and configuration
 - **More Security Tools** - Kubescape, Kyverno, Falco integrations
-- **Webhook Integrations** - Slack, Teams, PagerDuty notifications
+- **More Notifications** - Teams, PagerDuty integrations
 
 ## Contributing
 
