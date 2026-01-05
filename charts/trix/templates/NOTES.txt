@@ -1,0 +1,28 @@
+trix has been installed!
+
+1. Check the deployment status:
+   kubectl get pods -l "app.kubernetes.io/name={{ include "trix.name" . }}" -n {{ .Release.Namespace }}
+
+2. View the logs:
+   kubectl logs -l "app.kubernetes.io/name={{ include "trix.name" . }}" -n {{ .Release.Namespace }} -f
+
+3. Check vulnerability statistics:
+   kubectl exec -n {{ .Release.Namespace }} {{ include "trix.postgresql.fullname" . }}-0 -- \
+     psql -U {{ .Values.postgresql.user | default "trix" }} -c \
+     "SELECT state, severity, COUNT(*) FROM vulnerabilities GROUP BY state, severity"
+
+{{- if .Values.notifications.slack.enabled }}
+
+Slack notifications are enabled. You will receive alerts for:
+- New vulnerabilities (severity >= {{ .Values.config.minSeverity }})
+- Fixed vulnerabilities
+{{- else }}
+
+Slack notifications are disabled. Enable them in values.yaml:
+  notifications:
+    slack:
+      enabled: true
+      webhookUrl: "https://hooks.slack.com/services/..."
+{{- end }}
+
+For more information, visit: https://github.com/davealtena/trix

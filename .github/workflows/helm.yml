@@ -1,0 +1,78 @@
+name: Helm
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'charts/**'
+  pull_request:
+    paths:
+      - 'charts/**'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4
+        with:
+          version: v3.14.0
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@0d28d3144d3a25ea2cc349d6e59901c4ff469b3b # v2.7.0
+
+      - name: Run chart-testing (lint)
+        run: ct lint --config .github/ct.yaml
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+
+      - name: Run helm-docs
+        uses: losisin/helm-docs-github-action@5c729a549b9b467a904a184c1a23e2d702e8dfa2 # v1.6.2
+
+      - name: Check for changes
+        run: |
+          if ! git diff --exit-code charts/*/README.md; then
+            echo "README.md is out of date. Run 'helm-docs' locally and commit the changes."
+            exit 1
+          fi
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4
+        with:
+          version: v3.14.0
+
+      - name: Set up chart-testing
+        uses: helm/chart-testing-action@0d28d3144d3a25ea2cc349d6e59901c4ff469b3b # v2.7.0
+
+      - name: Create kind cluster
+        uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
+
+      - name: Install Trivy Operator CRDs
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/aquasecurity/trivy-operator/main/deploy/helm/crds/aquasecurity.github.io_vulnerabilityreports.yaml
+          kubectl apply -f https://raw.githubusercontent.com/aquasecurity/trivy-operator/main/deploy/helm/crds/aquasecurity.github.io_clustervulnerabilityreports.yaml
+
+      - name: Run chart-testing (install)
+        run: ct install --config .github/ct.yaml

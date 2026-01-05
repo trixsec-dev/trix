@@ -1,0 +1,161 @@
+# -- Number of replicas (only 1 supported for now due to database state)
+replicaCount: 1
+
+image:
+  # -- Image repository
+  repository: ghcr.io/davealtena/trix
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+  # -- Image tag (defaults to appVersion)
+  tag: ""
+
+# -- Image pull secrets
+imagePullSecrets: []
+# -- Override the name
+nameOverride: ""
+# -- Override the full name
+fullnameOverride: ""
+
+serviceAccount:
+  # -- Create a service account
+  create: true
+  # -- Annotations for the service account
+  annotations: {}
+  # -- Name of the service account (generated if not set)
+  name: ""
+
+# -- Pod annotations
+podAnnotations: {}
+
+# -- Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  fsGroup: 65534
+
+# -- Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# -- Resource requests and limits
+resources:
+  requests:
+    memory: 64Mi
+    cpu: 50m
+  limits:
+    memory: 256Mi
+    cpu: 200m
+
+# -- Node selector
+nodeSelector: {}
+
+# -- Tolerations
+tolerations: []
+
+# -- Affinity rules
+affinity: {}
+
+# Server configuration
+config:
+  # -- Poll interval for Trivy CRDs
+  pollInterval: "5m"
+  # -- Namespaces to watch (comma-separated, empty for all)
+  namespaces: ""
+  # -- Minimum severity for notifications (CRITICAL, HIGH, MEDIUM, LOW)
+  minSeverity: "CRITICAL"
+  # -- Log format (json or text)
+  logFormat: "json"
+  # -- Log level (debug, info, warn, error)
+  logLevel: "info"
+
+# Notification configuration
+notifications:
+  slack:
+    # -- Enable Slack notifications
+    enabled: false
+    # -- Slack webhook URL (use existingSecret for production)
+    webhookUrl: ""
+    # -- Use existing secret for Slack webhook
+    existingSecret: ""
+    # -- Key in existing secret
+    existingSecretKey: "webhook-url"
+  webhook:
+    # -- Enable generic webhook notifications
+    enabled: false
+    # -- Webhook URL
+    url: ""
+
+# Health probes
+healthCheck:
+  # -- Port for health endpoints
+  port: 8080
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: health
+  initialDelaySeconds: 10
+  periodSeconds: 30
+
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: health
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+# PostgreSQL configuration
+postgresql:
+  # -- Deploy PostgreSQL as part of this chart
+  enabled: true
+  # -- Use external PostgreSQL
+  external:
+    # -- External PostgreSQL host
+    host: ""
+    # -- External PostgreSQL port
+    port: 5432
+    # -- External PostgreSQL database
+    database: "trix"
+    # -- External PostgreSQL user
+    user: "trix"
+    # -- External PostgreSQL password (use existingSecret for production)
+    password: ""
+    # -- Use existing secret for PostgreSQL credentials
+    existingSecret: ""
+    # -- Key for username in existing secret
+    existingSecretUserKey: "username"
+    # -- Key for password in existing secret
+    existingSecretPasswordKey: "password"
+    # -- SSL mode
+    sslMode: "disable"
+  # Built-in PostgreSQL settings (when enabled: true)
+  image:
+    repository: postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+  # -- PostgreSQL resources
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+  persistence:
+    # -- Enable persistence
+    enabled: true
+    # -- Storage class (empty for default)
+    storageClass: ""
+    # -- PVC size
+    size: 1Gi
+    # -- Access mode
+    accessMode: ReadWriteOnce
+  # -- PostgreSQL user
+  user: "trix"
+  # -- PostgreSQL password (auto-generated if empty)
+  password: ""
+  # -- PostgreSQL database
+  database: "trix"

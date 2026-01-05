@@ -1,0 +1,20 @@
+apiVersion: v2
+name: trix
+description: Kubernetes Security Scanner with AI-Powered Triage and Continuous Monitoring
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/davealtena/trix
+sources:
+  - https://github.com/davealtena/trix
+maintainers:
+  - name: Dave Altena
+    url: https://github.com/davealtena
+keywords:
+  - security
+  - kubernetes
+  - trivy
+  - vulnerability
+  - scanner
+  - monitoring
+  - slack
