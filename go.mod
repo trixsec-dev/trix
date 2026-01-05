@@ -6,8 +6,10 @@ require (
 	github.com/anthropics/anthropic-sdk-go v1.19.0
 	github.com/charmbracelet/glamour v0.10.0
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
+	github.com/charmbracelet/lipgloss/v2 v2.0.0-beta.3
 	github.com/lib/pq v1.10.9
 	github.com/openai/openai-go v1.12.0
+	github.com/openai/openai-go/v3 v3.15.0
 	github.com/spf13/cobra v1.10.2
 	k8s.io/api v0.35.0
 	k8s.io/apimachinery v0.35.0
@@ -18,7 +20,7 @@ require (
 	github.com/alecthomas/chroma/v2 v2.14.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
-	github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc // indirect
+	github.com/charmbracelet/colorprofile v0.3.1 // indirect
 	github.com/charmbracelet/x/ansi v0.8.0 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
 	github.com/charmbracelet/x/exp/slice v0.0.0-20250327172914-2fdc97757edf // indirect
