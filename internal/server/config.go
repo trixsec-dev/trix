@@ -16,10 +16,17 @@ type Config struct {
 	PollInterval time.Duration
 	Namespaces   []string // Empty = all namespaces
 
+	// Cluster identity
+	ClusterName string // Human-readable cluster name for notifications
+
 	// Notifications
 	SlackWebhook   string
 	GenericWebhook string
 	MinSeverity    string // CRITICAL, HIGH, MEDIUM, LOW
+
+	// SAAS integration
+	SaasEndpoint string // Trix SAAS API endpoint (e.g., https://trix.example.com)
+	SaasApiKey   string // API key for SAAS authentication
 
 	// Logging
 	LogFormat string // json, text
@@ -63,6 +70,9 @@ func LoadConfig() (*Config, error) {
 		}
 	}
 
+	// Cluster identity
+	cfg.ClusterName = os.Getenv("TRIX_CLUSTER_NAME")
+
 	// Notifications
 	cfg.SlackWebhook = os.Getenv("TRIX_NOTIFY_SLACK")
 	cfg.GenericWebhook = os.Getenv("TRIX_NOTIFY_WEBHOOK")
@@ -70,6 +80,10 @@ func LoadConfig() (*Config, error) {
 	if v := os.Getenv("TRIX_NOTIFY_SEVERITY"); v != "" {
 		cfg.MinSeverity = strings.ToUpper(v)
 	}
+
+	// SAAS integration
+	cfg.SaasEndpoint = os.Getenv("TRIX_SAAS_ENDPOINT")
+	cfg.SaasApiKey = os.Getenv("TRIX_SAAS_API_KEY")
 
 	// Logging
 	if v := os.Getenv("TRIX_LOG_FORMAT"); v != "" {
@@ -89,5 +103,5 @@ func LoadConfig() (*Config, error) {
 
 // HasNotifications returns true if at least one notification target is configured.
 func (c *Config) HasNotifications() bool {
-	return c.SlackWebhook != "" || c.GenericWebhook != ""
+	return c.SlackWebhook != "" || c.GenericWebhook != "" || c.SaasEndpoint != ""
 }

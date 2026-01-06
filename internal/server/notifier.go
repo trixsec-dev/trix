@@ -45,6 +45,13 @@ func (n *Notifier) NotifyInitialized(ctx context.Context, events []Vulnerability
 		}
 	}
 
+	if n.config.SaasEndpoint != "" {
+		if err := n.sendSaasSummary(ctx, events); err != nil {
+			n.logger.Error("saas init notification failed", "error", err)
+			errs = append(errs, err)
+		}
+	}
+
 	if len(errs) > 0 {
 		return fmt.Errorf("notification errors: %v", errs)
 	}
@@ -69,6 +76,13 @@ func (n *Notifier) Notify(ctx context.Context, events []VulnerabilityEvent) erro
 	if n.config.GenericWebhook != "" {
 		if err := n.sendWebhook(ctx, filtered); err != nil {
 			n.logger.Error("webhook notification failed", "error", err)
+			errs = append(errs, err)
+		}
+	}
+
+	if n.config.SaasEndpoint != "" {
+		if err := n.sendSaas(ctx, filtered); err != nil {
+			n.logger.Error("saas notification failed", "error", err)
 			errs = append(errs, err)
 		}
 	}
@@ -284,4 +298,60 @@ func countBySeverity(events []VulnerabilityEvent) map[string]int {
 		counts[e.Severity]++
 	}
 	return counts
+}
+
+// SAAS notifier methods
+
+func (n *Notifier) sendSaas(ctx context.Context, events []VulnerabilityEvent) error {
+	payload := map[string]interface{}{
+		"cluster_name": n.config.ClusterName,
+		"timestamp":    time.Now().UTC().Format(time.RFC3339),
+		"events":       events,
+	}
+	url := strings.TrimSuffix(n.config.SaasEndpoint, "/") + "/api/v1/events"
+	return n.postJSONWithAuth(ctx, url, payload)
+}
+
+func (n *Notifier) sendSaasSummary(ctx context.Context, events []VulnerabilityEvent) error {
+	counts := countBySeverity(events)
+	payload := map[string]interface{}{
+		"cluster_name": n.config.ClusterName,
+		"type":         "initialized",
+		"timestamp":    time.Now().UTC().Format(time.RFC3339),
+		"total":        len(events),
+		"bySeverity":   counts,
+	}
+	url := strings.TrimSuffix(n.config.SaasEndpoint, "/") + "/api/v1/events"
+	return n.postJSONWithAuth(ctx, url, payload)
+}
+
+func (n *Notifier) postJSONWithAuth(ctx context.Context, url string, payload interface{}) error {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Add API key authentication if configured
+	if n.config.SaasApiKey != "" {
+		req.Header.Set("Authorization", "Bearer "+n.config.SaasApiKey)
+	}
+
+	resp, err := n.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("status %d", resp.StatusCode)
+	}
+
+	n.logger.Debug("saas notification sent", "url", url)
+	return nil
 }
