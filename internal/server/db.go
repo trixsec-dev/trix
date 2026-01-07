@@ -19,15 +19,19 @@ const (
 
 // VulnerabilityRecord represents a vulnerability in the database.
 type VulnerabilityRecord struct {
-	ID        string // hash(cve + workload)
-	CVE       string
-	Workload  string // namespace/kind/name
-	Severity  string
-	Image     string
-	State     VulnerabilityState
-	FirstSeen time.Time
-	LastSeen  time.Time
-	FixedAt   *time.Time
+	ID              string // hash(cve + workload + package + container)
+	CVE             string
+	Workload        string // namespace/kind/name
+	Severity        string
+	Image           string // package:version (legacy, kept for compatibility)
+	ContainerName   string
+	ImageRepository string
+	ImageTag        string
+	ImageDigest     string
+	State           VulnerabilityState
+	FirstSeen       time.Time
+	LastSeen        time.Time
+	FixedAt         *time.Time
 }
 
 // DB wraps the PostgreSQL connection and provides vulnerability operations.
@@ -98,6 +102,19 @@ func (db *DB) migrate(ctx context.Context) error {
 		CREATE INDEX IF NOT EXISTS idx_vuln_saas_synced ON vulnerabilities(saas_synced) WHERE NOT saas_synced
 	`)
 
+	// Migration: add container/image tracking columns
+	_, _ = db.conn.ExecContext(ctx, `
+		ALTER TABLE vulnerabilities ADD COLUMN IF NOT EXISTS container_name TEXT;
+		ALTER TABLE vulnerabilities ADD COLUMN IF NOT EXISTS image_repository TEXT;
+		ALTER TABLE vulnerabilities ADD COLUMN IF NOT EXISTS image_tag TEXT;
+		ALTER TABLE vulnerabilities ADD COLUMN IF NOT EXISTS image_digest TEXT;
+	`)
+
+	// Create index on image_digest for tracking
+	_, _ = db.conn.ExecContext(ctx, `
+		CREATE INDEX IF NOT EXISTS idx_vuln_image_digest ON vulnerabilities(image_digest) WHERE image_digest IS NOT NULL
+	`)
+
 	return nil
 }
 
@@ -116,7 +133,9 @@ func (db *DB) MarkSaasSynced(ctx context.Context, ids []string) error {
 // GetUnsyncedVulnerabilities returns vulnerabilities that haven't been synced to SaaS.
 func (db *DB) GetUnsyncedVulnerabilities(ctx context.Context) ([]VulnerabilityRecord, error) {
 	rows, err := db.conn.QueryContext(ctx, `
-		SELECT id, cve, workload, severity, image, state, first_seen, last_seen, fixed_at
+		SELECT id, cve, workload, severity, image,
+		       COALESCE(container_name, ''), COALESCE(image_repository, ''), COALESCE(image_tag, ''), COALESCE(image_digest, ''),
+		       state, first_seen, last_seen, fixed_at
 		FROM vulnerabilities
 		WHERE NOT saas_synced
 		ORDER BY first_seen ASC
@@ -130,7 +149,9 @@ func (db *DB) GetUnsyncedVulnerabilities(ctx context.Context) ([]VulnerabilityRe
 	var vulns []VulnerabilityRecord
 	for rows.Next() {
 		var v VulnerabilityRecord
-		if err := rows.Scan(&v.ID, &v.CVE, &v.Workload, &v.Severity, &v.Image, &v.State, &v.FirstSeen, &v.LastSeen, &v.FixedAt); err != nil {
+		if err := rows.Scan(&v.ID, &v.CVE, &v.Workload, &v.Severity, &v.Image,
+			&v.ContainerName, &v.ImageRepository, &v.ImageTag, &v.ImageDigest,
+			&v.State, &v.FirstSeen, &v.LastSeen, &v.FixedAt); err != nil {
 			return nil, err
 		}
 		vulns = append(vulns, v)
@@ -152,9 +173,9 @@ func (db *DB) UpsertVulnerability(ctx context.Context, v *VulnerabilityRecord) (
 	if err == sql.ErrNoRows {
 		// New vulnerability - insert
 		_, err = db.conn.ExecContext(ctx, `
-			INSERT INTO vulnerabilities (id, cve, workload, severity, image, state, first_seen, last_seen)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
-		`, v.ID, v.CVE, v.Workload, v.Severity, v.Image, StateOpen, time.Now())
+			INSERT INTO vulnerabilities (id, cve, workload, severity, image, container_name, image_repository, image_tag, image_digest, state, first_seen, last_seen)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)
+		`, v.ID, v.CVE, v.Workload, v.Severity, v.Image, v.ContainerName, v.ImageRepository, v.ImageTag, v.ImageDigest, StateOpen, time.Now())
 		return true, err
 	}
 
@@ -167,16 +188,19 @@ func (db *DB) UpsertVulnerability(ctx context.Context, v *VulnerabilityRecord) (
 		// Reopened!
 		_, err = db.conn.ExecContext(ctx, `
 			UPDATE vulnerabilities
-			SET state = $1, last_seen = $2, fixed_at = NULL, severity = $3, image = $4
-			WHERE id = $5
-		`, StateOpen, time.Now(), v.Severity, v.Image, v.ID)
+			SET state = $1, last_seen = $2, fixed_at = NULL, severity = $3, image = $4,
+			    container_name = $5, image_repository = $6, image_tag = $7, image_digest = $8
+			WHERE id = $9
+		`, StateOpen, time.Now(), v.Severity, v.Image, v.ContainerName, v.ImageRepository, v.ImageTag, v.ImageDigest, v.ID)
 		return true, err // Treat reopen as "new" for notification purposes
 	}
 
-	// Just update last_seen
+	// Just update last_seen and image info
 	_, err = db.conn.ExecContext(ctx, `
-		UPDATE vulnerabilities SET last_seen = $1, severity = $2, image = $3 WHERE id = $4
-	`, time.Now(), v.Severity, v.Image, v.ID)
+		UPDATE vulnerabilities
+		SET last_seen = $1, severity = $2, image = $3, container_name = $4, image_repository = $5, image_tag = $6, image_digest = $7
+		WHERE id = $8
+	`, time.Now(), v.Severity, v.Image, v.ContainerName, v.ImageRepository, v.ImageTag, v.ImageDigest, v.ID)
 	return false, err
 }
 
@@ -193,7 +217,9 @@ func (db *DB) MarkFixed(ctx context.Context, currentIDs []string) ([]Vulnerabili
 		UPDATE vulnerabilities
 		SET state = $1, fixed_at = $2
 		WHERE state = $3 AND id != ALL($4)
-		RETURNING id, cve, workload, severity, image, first_seen
+		RETURNING id, cve, workload, severity, image,
+		          COALESCE(container_name, ''), COALESCE(image_repository, ''), COALESCE(image_tag, ''), COALESCE(image_digest, ''),
+		          first_seen
 	`
 
 	now := time.Now()
@@ -206,7 +232,9 @@ func (db *DB) MarkFixed(ctx context.Context, currentIDs []string) ([]Vulnerabili
 	var fixed []VulnerabilityRecord
 	for rows.Next() {
 		var v VulnerabilityRecord
-		if err := rows.Scan(&v.ID, &v.CVE, &v.Workload, &v.Severity, &v.Image, &v.FirstSeen); err != nil {
+		if err := rows.Scan(&v.ID, &v.CVE, &v.Workload, &v.Severity, &v.Image,
+			&v.ContainerName, &v.ImageRepository, &v.ImageTag, &v.ImageDigest,
+			&v.FirstSeen); err != nil {
 			return nil, err
 		}
 		v.State = StateFixed
@@ -222,7 +250,9 @@ func (db *DB) markAllFixed(ctx context.Context) ([]VulnerabilityRecord, error) {
 		UPDATE vulnerabilities
 		SET state = $1, fixed_at = $2
 		WHERE state = $3
-		RETURNING id, cve, workload, severity, image, first_seen
+		RETURNING id, cve, workload, severity, image,
+		          COALESCE(container_name, ''), COALESCE(image_repository, ''), COALESCE(image_tag, ''), COALESCE(image_digest, ''),
+		          first_seen
 	`
 
 	now := time.Now()
@@ -235,7 +265,9 @@ func (db *DB) markAllFixed(ctx context.Context) ([]VulnerabilityRecord, error) {
 	var fixed []VulnerabilityRecord
 	for rows.Next() {
 		var v VulnerabilityRecord
-		if err := rows.Scan(&v.ID, &v.CVE, &v.Workload, &v.Severity, &v.Image, &v.FirstSeen); err != nil {
+		if err := rows.Scan(&v.ID, &v.CVE, &v.Workload, &v.Severity, &v.Image,
+			&v.ContainerName, &v.ImageRepository, &v.ImageTag, &v.ImageDigest,
+			&v.FirstSeen); err != nil {
 			return nil, err
 		}
 		v.State = StateFixed
@@ -249,7 +281,9 @@ func (db *DB) markAllFixed(ctx context.Context) ([]VulnerabilityRecord, error) {
 // GetOpenVulnerabilities returns all open vulnerabilities.
 func (db *DB) GetOpenVulnerabilities(ctx context.Context) ([]VulnerabilityRecord, error) {
 	rows, err := db.conn.QueryContext(ctx, `
-		SELECT id, cve, workload, severity, image, state, first_seen, last_seen, fixed_at
+		SELECT id, cve, workload, severity, image,
+		       COALESCE(container_name, ''), COALESCE(image_repository, ''), COALESCE(image_tag, ''), COALESCE(image_digest, ''),
+		       state, first_seen, last_seen, fixed_at
 		FROM vulnerabilities WHERE state = $1
 		ORDER BY
 			CASE severity
@@ -269,7 +303,9 @@ func (db *DB) GetOpenVulnerabilities(ctx context.Context) ([]VulnerabilityRecord
 	var vulns []VulnerabilityRecord
 	for rows.Next() {
 		var v VulnerabilityRecord
-		if err := rows.Scan(&v.ID, &v.CVE, &v.Workload, &v.Severity, &v.Image, &v.State, &v.FirstSeen, &v.LastSeen, &v.FixedAt); err != nil {
+		if err := rows.Scan(&v.ID, &v.CVE, &v.Workload, &v.Severity, &v.Image,
+			&v.ContainerName, &v.ImageRepository, &v.ImageTag, &v.ImageDigest,
+			&v.State, &v.FirstSeen, &v.LastSeen, &v.FixedAt); err != nil {
 			return nil, err
 		}
 		vulns = append(vulns, v)

@@ -204,14 +204,18 @@ func (s *Server) retrySaasSync(ctx context.Context) {
 			eventType = "FIXED"
 		}
 		events = append(events, VulnerabilityEvent{
-			ID:        v.ID,
-			Type:      eventType,
-			CVE:       v.CVE,
-			Workload:  v.Workload,
-			Severity:  v.Severity,
-			Image:     v.Image,
-			FirstSeen: v.FirstSeen,
-			FixedAt:   v.FixedAt,
+			ID:              v.ID,
+			Type:            eventType,
+			CVE:             v.CVE,
+			Workload:        v.Workload,
+			Severity:        v.Severity,
+			Image:           v.Image,
+			ContainerName:   v.ContainerName,
+			ImageRepository: v.ImageRepository,
+			ImageTag:        v.ImageTag,
+			ImageDigest:     v.ImageDigest,
+			FirstSeen:       v.FirstSeen,
+			FixedAt:         v.FixedAt,
 		})
 	}
 

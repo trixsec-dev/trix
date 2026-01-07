@@ -32,18 +32,42 @@ func (s *ClusterVulnScanner) Scan(ctx context.Context, _ string) ([]Finding, err
 		}
 		name, _ := metadata["name"].(string)
 
+		// Extract artifact info for cluster-scoped reports
+		artifact := extractClusterArtifactInfo(report)
+
 		vulns, err := s.client.ParseVulnerabilities(report)
 		if err != nil {
 			continue
 		}
 
 		for _, v := range vulns {
-			finding := VulnerabilityToFinding(v, "", name)
-			finding.ResourceKind = "Cluster"
+			finding := VulnerabilityToFinding(v, "", "Cluster", name, artifact)
 			findings = append(findings, finding)
 		}
 	}
 	return findings, nil
+}
+
+// extractClusterArtifactInfo extracts artifact info from cluster vulnerability reports
+func extractClusterArtifactInfo(report map[string]interface{}) ArtifactInfo {
+	artifact := ArtifactInfo{}
+
+	// Navigate to report.artifact
+	reportData, ok := report["report"].(map[string]interface{})
+	if !ok {
+		return artifact
+	}
+
+	artifactData, ok := reportData["artifact"].(map[string]interface{})
+	if !ok {
+		return artifact
+	}
+
+	artifact.Repository, _ = artifactData["repository"].(string)
+	artifact.Tag, _ = artifactData["tag"].(string)
+	artifact.Digest, _ = artifactData["digest"].(string)
+
+	return artifact
 }
 
 // ClusterComplianceScanner scans cluster-scoped config audit reports

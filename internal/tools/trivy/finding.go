@@ -38,6 +38,12 @@ type Finding struct {
 	ResourceKind string `json:"resourceKind,omitempty"`
 	ResourceName string `json:"resourceName,omitempty"`
 
+	// Container/Image - for per-container tracking
+	ContainerName   string `json:"containerName,omitempty"`
+	ImageRepository string `json:"imageRepository,omitempty"`
+	ImageTag        string `json:"imageTag,omitempty"`
+	ImageDigest     string `json:"imageDigest,omitempty"`
+
 	// Description
 	Title       string `json:"title"`
 	Description string `json:"description,omitempty"`
@@ -51,21 +57,33 @@ type Finding struct {
 	RawData interface{} `json:"rawData,omitempty"`
 }
 
+// ArtifactInfo contains container image details from Trivy reports.
+type ArtifactInfo struct {
+	ContainerName string
+	Repository    string
+	Tag           string
+	Digest        string
+}
+
 // VulnerabilityToFinding converts a Trivy vulnerability to a Finding
-func VulnerabilityToFinding(v Vulnerability, namespace, resourceName string) Finding {
+func VulnerabilityToFinding(v Vulnerability, namespace, resourceKind, resourceName string, artifact ArtifactInfo) Finding {
 	return Finding{
-		ID:           v.VulnerabilityID,
-		Type:         FindingTypeVulnerability,
-		Severity:     Severity(v.Severity), // Convert string to Severity type
-		Score:        v.Score,
-		Namespace:    namespace,
-		ResourceKind: "Pod",
-		ResourceName: resourceName,
-		Title:        v.Title,
-		Description:  fmt.Sprintf("%s %s (installed: %s, fixed: %s)", v.PkgName, v.VulnerabilityID, v.InstalledVersion, v.FixedVersion),
-		Remediation:  fmt.Sprintf("Update %s to version %s", v.PkgName, v.FixedVersion),
-		Source:       "trivy",
-		RawData:      v,
+		ID:              v.VulnerabilityID,
+		Type:            FindingTypeVulnerability,
+		Severity:        Severity(v.Severity), // Convert string to Severity type
+		Score:           v.Score,
+		Namespace:       namespace,
+		ResourceKind:    resourceKind,
+		ResourceName:    resourceName,
+		ContainerName:   artifact.ContainerName,
+		ImageRepository: artifact.Repository,
+		ImageTag:        artifact.Tag,
+		ImageDigest:     artifact.Digest,
+		Title:           v.Title,
+		Description:     fmt.Sprintf("%s %s (installed: %s, fixed: %s)", v.PkgName, v.VulnerabilityID, v.InstalledVersion, v.FixedVersion),
+		Remediation:     fmt.Sprintf("Update %s to version %s", v.PkgName, v.FixedVersion),
+		Source:          "trivy",
+		RawData:         v,
 	}
 }
 
