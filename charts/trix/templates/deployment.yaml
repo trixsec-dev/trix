@@ -66,6 +66,15 @@ spec:
             - name: TRIX_NOTIFY_WEBHOOK
               value: {{ .Values.notifications.webhook.url | quote }}
             {{- end }}
+            {{- if .Values.notifications.saas.enabled }}
+            - name: TRIX_SAAS_ENDPOINT
+              value: {{ .Values.notifications.saas.endpoint | quote }}
+            - name: TRIX_SAAS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.notifications.saas.existingSecret | default (printf "%s-saas" (include "trix.fullname" .)) }}
+                  key: {{ .Values.notifications.saas.existingSecretKey | default "api-key" }}
+            {{- end }}
           ports:
             - name: health
               containerPort: {{ .Values.healthCheck.port }}

@@ -11,6 +11,18 @@ import (
 	"time"
 )
 
+const (
+	saasBatchSize  = 50 // Send events in batches to avoid timeouts
+	saasMaxRetries = 3  // Number of retries per batch
+)
+
+// SaasResult contains the result of a SaaS sync operation.
+type SaasResult struct {
+	SyncedIDs []string // IDs that were successfully synced
+	FailedIDs []string // IDs that failed to sync
+	Err       error    // First error encountered (if any)
+}
+
 type Notifier struct {
 	config     *Config
 	httpClient *http.Client
@@ -28,69 +40,46 @@ func NewNotifier(config *Config, logger *slog.Logger) *Notifier {
 }
 
 // NotifyInitialized sends a summary notification on first poll.
-func (n *Notifier) NotifyInitialized(ctx context.Context, events []VulnerabilityEvent) error {
-	var errs []error
-
+// Returns SaasResult for tracking which events were synced.
+func (n *Notifier) NotifyInitialized(ctx context.Context, events []VulnerabilityEvent) *SaasResult {
 	if n.config.SlackWebhook != "" {
 		if err := n.sendSlackSummary(ctx, events); err != nil {
 			n.logger.Error("slack init notification failed", "error", err)
-			errs = append(errs, err)
 		}
 	}
 
 	if n.config.GenericWebhook != "" {
 		if err := n.sendWebhookSummary(ctx, events); err != nil {
 			n.logger.Error("webhook init notification failed", "error", err)
-			errs = append(errs, err)
 		}
 	}
 
-	if n.config.SaasEndpoint != "" {
-		if err := n.sendSaasSummary(ctx, events); err != nil {
-			n.logger.Error("saas init notification failed", "error", err)
-			errs = append(errs, err)
-		}
-	}
-
-	if len(errs) > 0 {
-		return fmt.Errorf("notification errors: %v", errs)
-	}
-	return nil
+	// SaaS gets individual vulnerabilities with retry logic
+	return n.SendSaas(ctx, events)
 }
 
-func (n *Notifier) Notify(ctx context.Context, events []VulnerabilityEvent) error {
+// Notify sends notifications for new/changed events.
+// Returns SaasResult for tracking which events were synced.
+func (n *Notifier) Notify(ctx context.Context, events []VulnerabilityEvent) *SaasResult {
 	filtered := n.filterBySeverity(events)
 	if len(filtered) == 0 {
-		return nil
+		return &SaasResult{}
 	}
-
-	var errs []error
 
 	if n.config.SlackWebhook != "" {
 		if err := n.sendSlack(ctx, filtered); err != nil {
 			n.logger.Error("slack notification failed", "error", err)
-			errs = append(errs, err)
 		}
 	}
 
 	if n.config.GenericWebhook != "" {
 		if err := n.sendWebhook(ctx, filtered); err != nil {
 			n.logger.Error("webhook notification failed", "error", err)
-			errs = append(errs, err)
 		}
 	}
 
-	if n.config.SaasEndpoint != "" {
-		if err := n.sendSaas(ctx, filtered); err != nil {
-			n.logger.Error("saas notification failed", "error", err)
-			errs = append(errs, err)
-		}
-	}
-
-	if len(errs) > 0 {
-		return fmt.Errorf("notification errors: %v", errs)
-	}
-	return nil
+	// SaaS with retry logic - note: SaaS gets all events, not severity filtered
+	return n.SendSaas(ctx, events)
 }
 
 func (n *Notifier) filterBySeverity(events []VulnerabilityEvent) []VulnerabilityEvent {
@@ -302,20 +291,90 @@ func countBySeverity(events []VulnerabilityEvent) map[string]int {
 
 // SAAS notifier methods
 
-func (n *Notifier) sendSaas(ctx context.Context, events []VulnerabilityEvent) error {
-	payload := map[string]interface{}{
-		"cluster_name": n.config.ClusterName,
-		"timestamp":    time.Now().UTC().Format(time.RFC3339),
-		"events":       events,
+// SendSaas sends events to the SaaS backend with retry logic.
+// Returns a SaasResult indicating which events succeeded/failed.
+func (n *Notifier) SendSaas(ctx context.Context, events []VulnerabilityEvent) *SaasResult {
+	if n.config.SaasEndpoint == "" {
+		return &SaasResult{}
 	}
+
+	result := &SaasResult{}
 	url := strings.TrimSuffix(n.config.SaasEndpoint, "/") + "/api/v1/events"
-	return n.postJSONWithAuth(ctx, url, payload)
+
+	// Send events in batches
+	for i := 0; i < len(events); i += saasBatchSize {
+		end := i + saasBatchSize
+		if end > len(events) {
+			end = len(events)
+		}
+		batch := events[i:end]
+
+		// Collect IDs from this batch
+		batchIDs := make([]string, 0, len(batch))
+		for _, e := range batch {
+			if e.ID != "" {
+				batchIDs = append(batchIDs, e.ID)
+			}
+		}
+
+		payload := map[string]interface{}{
+			"cluster_name": n.config.ClusterName,
+			"trix_version": n.config.Version,
+			"timestamp":    time.Now().UTC().Format(time.RFC3339),
+			"events":       batch,
+		}
+
+		// Retry with exponential backoff
+		var lastErr error
+		for attempt := 0; attempt < saasMaxRetries; attempt++ {
+			if attempt > 0 {
+				backoff := time.Duration(1<<uint(attempt-1)) * time.Second // 1s, 2s, 4s
+				n.logger.Debug("retrying saas batch", "attempt", attempt+1, "backoff", backoff)
+				select {
+				case <-ctx.Done():
+					result.FailedIDs = append(result.FailedIDs, batchIDs...)
+					result.Err = ctx.Err()
+					return result
+				case <-time.After(backoff):
+				}
+			}
+
+			if err := n.postJSONWithAuth(ctx, url, payload); err != nil {
+				lastErr = err
+				n.logger.Warn("saas batch failed", "batch", i/saasBatchSize+1, "attempt", attempt+1, "error", err)
+				continue
+			}
+
+			// Success
+			result.SyncedIDs = append(result.SyncedIDs, batchIDs...)
+			n.logger.Info("saas batch sent", "batch", i/saasBatchSize+1, "events", len(batch), "total", len(events))
+			lastErr = nil
+			break
+		}
+
+		if lastErr != nil {
+			// All retries failed for this batch
+			result.FailedIDs = append(result.FailedIDs, batchIDs...)
+			if result.Err == nil {
+				result.Err = fmt.Errorf("batch %d-%d failed after %d retries: %w", i, end, saasMaxRetries, lastErr)
+			}
+			n.logger.Error("saas batch failed permanently",
+				"batch", i/saasBatchSize+1,
+				"events", len(batch),
+				"failed_ids", len(batchIDs),
+				"error", lastErr,
+			)
+		}
+	}
+
+	return result
 }
 
 func (n *Notifier) sendSaasSummary(ctx context.Context, events []VulnerabilityEvent) error {
 	counts := countBySeverity(events)
 	payload := map[string]interface{}{
 		"cluster_name": n.config.ClusterName,
+		"trix_version": n.config.Version,
 		"type":         "initialized",
 		"timestamp":    time.Now().UTC().Format(time.RFC3339),
 		"total":        len(events),

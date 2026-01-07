@@ -64,7 +64,8 @@ func (db *DB) Close() error {
 
 // migrate ensures the database schema exists.
 func (db *DB) migrate(ctx context.Context) error {
-	schema := `
+	// Create base table if not exists
+	baseSchema := `
 	CREATE TABLE IF NOT EXISTS vulnerabilities (
 		id TEXT PRIMARY KEY,
 		cve TEXT NOT NULL,
@@ -83,8 +84,59 @@ func (db *DB) migrate(ctx context.Context) error {
 	CREATE INDEX IF NOT EXISTS idx_vuln_workload ON vulnerabilities(workload);
 	`
 
-	_, err := db.conn.ExecContext(ctx, schema)
+	if _, err := db.conn.ExecContext(ctx, baseSchema); err != nil {
+		return err
+	}
+
+	// Migration: add saas_synced column if it doesn't exist (for existing databases)
+	_, _ = db.conn.ExecContext(ctx, `
+		ALTER TABLE vulnerabilities ADD COLUMN IF NOT EXISTS saas_synced BOOLEAN NOT NULL DEFAULT FALSE
+	`)
+
+	// Create index on saas_synced (after column exists)
+	_, _ = db.conn.ExecContext(ctx, `
+		CREATE INDEX IF NOT EXISTS idx_vuln_saas_synced ON vulnerabilities(saas_synced) WHERE NOT saas_synced
+	`)
+
+	return nil
+}
+
+// MarkSaasSynced marks vulnerabilities as synced to SaaS.
+func (db *DB) MarkSaasSynced(ctx context.Context, ids []string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	_, err := db.conn.ExecContext(ctx,
+		"UPDATE vulnerabilities SET saas_synced = TRUE WHERE id = ANY($1)",
+		pq.Array(ids),
+	)
 	return err
+}
+
+// GetUnsyncedVulnerabilities returns vulnerabilities that haven't been synced to SaaS.
+func (db *DB) GetUnsyncedVulnerabilities(ctx context.Context) ([]VulnerabilityRecord, error) {
+	rows, err := db.conn.QueryContext(ctx, `
+		SELECT id, cve, workload, severity, image, state, first_seen, last_seen, fixed_at
+		FROM vulnerabilities
+		WHERE NOT saas_synced
+		ORDER BY first_seen ASC
+		LIMIT 500
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var vulns []VulnerabilityRecord
+	for rows.Next() {
+		var v VulnerabilityRecord
+		if err := rows.Scan(&v.ID, &v.CVE, &v.Workload, &v.Severity, &v.Image, &v.State, &v.FirstSeen, &v.LastSeen, &v.FixedAt); err != nil {
+			return nil, err
+		}
+		vulns = append(vulns, v)
+	}
+
+	return vulns, rows.Err()
 }
 
 // UpsertVulnerability inserts or updates a vulnerability record.

@@ -13,6 +13,7 @@ import (
 
 // VulnerabilityEvent represents a change in vulnerability state.
 type VulnerabilityEvent struct {
+	ID        string // Unique identifier for sync tracking
 	Type      string // NEW, FIXED
 	CVE       string
 	Workload  string
@@ -75,6 +76,7 @@ func (p *Poller) Poll(ctx context.Context) ([]VulnerabilityEvent, error) {
 
 		if isNew {
 			events = append(events, VulnerabilityEvent{
+				ID:        record.ID,
 				Type:      "NEW",
 				CVE:       record.CVE,
 				Workload:  record.Workload,
@@ -92,6 +94,7 @@ func (p *Poller) Poll(ctx context.Context) ([]VulnerabilityEvent, error) {
 	} else {
 		for _, v := range fixed {
 			events = append(events, VulnerabilityEvent{
+				ID:        v.ID,
 				Type:      "FIXED",
 				CVE:       v.CVE,
 				Workload:  v.Workload,

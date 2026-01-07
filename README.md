@@ -302,15 +302,29 @@ See [deploy/README.md](deploy/README.md) for Kubernetes deployment with Kustomiz
 | `TRIX_DATABASE_URL` | PostgreSQL connection string | required |
 | `TRIX_POLL_INTERVAL` | How often to poll | `5m` |
 | `TRIX_NAMESPACES` | Namespaces to watch (comma-separated) | all |
+| `TRIX_CLUSTER_NAME` | Human-readable cluster name for notifications | - |
 | `TRIX_NOTIFY_SLACK` | Slack incoming webhook URL | - |
 | `TRIX_NOTIFY_WEBHOOK` | Generic webhook URL | - |
 | `TRIX_NOTIFY_SEVERITY` | Minimum severity to notify | `CRITICAL` |
+| `TRIX_SAAS_ENDPOINT` | Trix SaaS API endpoint | - |
+| `TRIX_SAAS_API_KEY` | API key for SaaS authentication | - |
+
+### Helm Chart
+
+A Helm chart is available for easy deployment:
+
+```bash
+helm repo add trix https://davealtena.github.io/trix
+helm install trix trix/trix -n trix-system --create-namespace
+```
+
+See [charts/trix/README.md](charts/trix/README.md) for full configuration options.
 
 ## Roadmap
 
-- **Helm Chart** - Easy deployment and configuration
 - **More Security Tools** - Kubescape, Kyverno, Falco integrations
 - **More Notifications** - Teams, PagerDuty integrations
+- **SaaS Dashboard** - Centralized vulnerability management across clusters
 
 ## Contributing
 

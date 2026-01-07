@@ -135,14 +135,18 @@ func (s *Server) poll(ctx context.Context) {
 		return
 	}
 
+	// Always check for unsynced events and retry them
+	if s.config.SaasEndpoint != "" {
+		s.retrySaasSync(ctx)
+	}
+
 	if s.firstPoll {
 		s.firstPoll = false
 		// Only send init notification on fresh start (new vulnerabilities found)
 		// Skip if this is a restart with existing database
 		if len(events) > 0 {
-			if err := s.notifier.NotifyInitialized(ctx, events); err != nil {
-				s.logger.Error("init notification failed", "error", err)
-			}
+			result := s.notifier.NotifyInitialized(ctx, events)
+			s.handleSaasResult(ctx, result)
 		} else {
 			s.logger.Info("resumed monitoring, database has existing data")
 		}
@@ -150,8 +154,67 @@ func (s *Server) poll(ctx context.Context) {
 	}
 
 	if len(events) > 0 {
-		if err := s.notifier.Notify(ctx, events); err != nil {
-			s.logger.Error("notify failed", "error", err)
+		result := s.notifier.Notify(ctx, events)
+		s.handleSaasResult(ctx, result)
+	}
+}
+
+// handleSaasResult marks synced events in the database.
+func (s *Server) handleSaasResult(ctx context.Context, result *SaasResult) {
+	if result == nil {
+		return
+	}
+
+	if len(result.SyncedIDs) > 0 {
+		if err := s.db.MarkSaasSynced(ctx, result.SyncedIDs); err != nil {
+			s.logger.Error("failed to mark events as synced", "error", err)
 		}
 	}
+
+	if result.Err != nil {
+		s.logger.Error("saas sync had failures",
+			"synced", len(result.SyncedIDs),
+			"failed", len(result.FailedIDs),
+			"error", result.Err,
+		)
+	} else if len(result.SyncedIDs) > 0 {
+		s.logger.Info("saas sync complete", "synced", len(result.SyncedIDs))
+	}
+}
+
+// retrySaasSync retries syncing events that previously failed.
+func (s *Server) retrySaasSync(ctx context.Context) {
+	unsynced, err := s.db.GetUnsyncedVulnerabilities(ctx)
+	if err != nil {
+		s.logger.Error("failed to get unsynced vulnerabilities", "error", err)
+		return
+	}
+
+	if len(unsynced) == 0 {
+		return
+	}
+
+	s.logger.Info("retrying unsynced events", "count", len(unsynced))
+
+	// Convert records to events
+	events := make([]VulnerabilityEvent, 0, len(unsynced))
+	for _, v := range unsynced {
+		eventType := "NEW"
+		if v.State == StateFixed {
+			eventType = "FIXED"
+		}
+		events = append(events, VulnerabilityEvent{
+			ID:        v.ID,
+			Type:      eventType,
+			CVE:       v.CVE,
+			Workload:  v.Workload,
+			Severity:  v.Severity,
+			Image:     v.Image,
+			FirstSeen: v.FirstSeen,
+			FixedAt:   v.FixedAt,
+		})
+	}
+
+	result := s.notifier.SendSaas(ctx, events)
+	s.handleSaasResult(ctx, result)
 }
