@@ -125,6 +125,13 @@ func (s *Server) runPollLoop(ctx context.Context) {
 }
 
 func (s *Server) poll(ctx context.Context) {
+	// Retry previously failed SaaS syncs BEFORE polling for new events.
+	// This prevents double-sending: new events from Poll() would otherwise
+	// be picked up by both retrySaasSync() AND Notify().
+	if s.config.SaasEndpoint != "" {
+		s.retrySaasSync(ctx)
+	}
+
 	events, err := s.poller.Poll(ctx)
 	if err != nil {
 		s.logger.Error("poll failed", "error", err)
@@ -133,11 +140,6 @@ func (s *Server) poll(ctx context.Context) {
 
 	if !s.config.HasNotifications() {
 		return
-	}
-
-	// Always check for unsynced events and retry them
-	if s.config.SaasEndpoint != "" {
-		s.retrySaasSync(ctx)
 	}
 
 	if s.firstPoll {

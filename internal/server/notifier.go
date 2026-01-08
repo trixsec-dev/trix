@@ -60,25 +60,32 @@ func (n *Notifier) NotifyInitialized(ctx context.Context, events []Vulnerability
 
 // Notify sends notifications for new/changed events.
 // Returns SaasResult for tracking which events were synced.
+//
+// Note: Slack/Webhook get severity-filtered events, but SaaS receives ALL events
+// regardless of severity filter. This is intentional - the SaaS dashboard handles
+// its own filtering and needs complete data for accurate tracking.
 func (n *Notifier) Notify(ctx context.Context, events []VulnerabilityEvent) *SaasResult {
+	// Filter by severity for Slack/Webhook notifications only
 	filtered := n.filterBySeverity(events)
-	if len(filtered) == 0 {
+
+	// Early return only affects Slack/Webhook - SaaS still gets all events below
+	if len(filtered) == 0 && n.config.SaasEndpoint == "" {
 		return &SaasResult{}
 	}
 
-	if n.config.SlackWebhook != "" {
+	if n.config.SlackWebhook != "" && len(filtered) > 0 {
 		if err := n.sendSlack(ctx, filtered); err != nil {
 			n.logger.Error("slack notification failed", "error", err)
 		}
 	}
 
-	if n.config.GenericWebhook != "" {
+	if n.config.GenericWebhook != "" && len(filtered) > 0 {
 		if err := n.sendWebhook(ctx, filtered); err != nil {
 			n.logger.Error("webhook notification failed", "error", err)
 		}
 	}
 
-	// SaaS with retry logic - note: SaaS gets all events, not severity filtered
+	// SaaS receives ALL events (unfiltered) for complete tracking
 	return n.SendSaas(ctx, events)
 }
 

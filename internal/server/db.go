@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/lib/pq"
@@ -93,27 +94,35 @@ func (db *DB) migrate(ctx context.Context) error {
 	}
 
 	// Migration: add saas_synced column if it doesn't exist (for existing databases)
-	_, _ = db.conn.ExecContext(ctx, `
+	if _, err := db.conn.ExecContext(ctx, `
 		ALTER TABLE vulnerabilities ADD COLUMN IF NOT EXISTS saas_synced BOOLEAN NOT NULL DEFAULT FALSE
-	`)
+	`); err != nil {
+		log.Printf("migration warning: add saas_synced column: %v", err)
+	}
 
 	// Create index on saas_synced (after column exists)
-	_, _ = db.conn.ExecContext(ctx, `
+	if _, err := db.conn.ExecContext(ctx, `
 		CREATE INDEX IF NOT EXISTS idx_vuln_saas_synced ON vulnerabilities(saas_synced) WHERE NOT saas_synced
-	`)
+	`); err != nil {
+		log.Printf("migration warning: create saas_synced index: %v", err)
+	}
 
 	// Migration: add container/image tracking columns
-	_, _ = db.conn.ExecContext(ctx, `
+	if _, err := db.conn.ExecContext(ctx, `
 		ALTER TABLE vulnerabilities ADD COLUMN IF NOT EXISTS container_name TEXT;
 		ALTER TABLE vulnerabilities ADD COLUMN IF NOT EXISTS image_repository TEXT;
 		ALTER TABLE vulnerabilities ADD COLUMN IF NOT EXISTS image_tag TEXT;
 		ALTER TABLE vulnerabilities ADD COLUMN IF NOT EXISTS image_digest TEXT;
-	`)
+	`); err != nil {
+		log.Printf("migration warning: add container tracking columns: %v", err)
+	}
 
 	// Create index on image_digest for tracking
-	_, _ = db.conn.ExecContext(ctx, `
+	if _, err := db.conn.ExecContext(ctx, `
 		CREATE INDEX IF NOT EXISTS idx_vuln_image_digest ON vulnerabilities(image_digest) WHERE image_digest IS NOT NULL
-	`)
+	`); err != nil {
+		log.Printf("migration warning: create image_digest index: %v", err)
+	}
 
 	return nil
 }
@@ -185,11 +194,12 @@ func (db *DB) UpsertVulnerability(ctx context.Context, v *VulnerabilityRecord) (
 
 	// Existing vulnerability - update last_seen, reopen if was fixed
 	if existingState == string(StateFixed) {
-		// Reopened!
+		// Reopened! Reset saas_synced so reopen event gets sent to SaaS
 		_, err = db.conn.ExecContext(ctx, `
 			UPDATE vulnerabilities
 			SET state = $1, last_seen = $2, fixed_at = NULL, severity = $3, image = $4,
-			    container_name = $5, image_repository = $6, image_tag = $7, image_digest = $8
+			    container_name = $5, image_repository = $6, image_tag = $7, image_digest = $8,
+			    saas_synced = FALSE
 			WHERE id = $9
 		`, StateOpen, time.Now(), v.Severity, v.Image, v.ContainerName, v.ImageRepository, v.ImageTag, v.ImageDigest, v.ID)
 		return true, err // Treat reopen as "new" for notification purposes

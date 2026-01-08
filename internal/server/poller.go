@@ -13,18 +13,18 @@ import (
 
 // VulnerabilityEvent represents a change in vulnerability state.
 type VulnerabilityEvent struct {
-	ID              string `json:"ID"`
-	Type            string `json:"Type"` // NEW, FIXED
-	CVE             string `json:"CVE"`
-	Workload        string `json:"Workload"`
-	Severity        string `json:"Severity"`
-	Image           string `json:"Image"` // package:version (legacy)
-	ContainerName   string `json:"ContainerName,omitempty"`
-	ImageRepository string `json:"ImageRepository,omitempty"`
-	ImageTag        string `json:"ImageTag,omitempty"`
-	ImageDigest     string `json:"ImageDigest,omitempty"`
-	FirstSeen       time.Time
-	FixedAt         *time.Time
+	ID              string     `json:"ID"`
+	Type            string     `json:"Type"` // NEW, FIXED
+	CVE             string     `json:"CVE"`
+	Workload        string     `json:"Workload"`
+	Severity        string     `json:"Severity"`
+	Image           string     `json:"Image"` // package:version (legacy)
+	ContainerName   string     `json:"ContainerName,omitempty"`
+	ImageRepository string     `json:"ImageRepository,omitempty"`
+	ImageTag        string     `json:"ImageTag,omitempty"`
+	ImageDigest     string     `json:"ImageDigest,omitempty"`
+	FirstSeen       time.Time  `json:"FirstSeen"`
+	FixedAt         *time.Time `json:"FixedAt,omitempty"`
 }
 
 // Poller periodically scans Trivy CRDs and detects changes.
