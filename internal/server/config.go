@@ -28,6 +28,9 @@ type Config struct {
 	SaasEndpoint string // Trix SAAS API endpoint (e.g., https://trix.example.com)
 	SaasApiKey   string // API key for SAAS authentication
 
+	// Version (set by serve command)
+	Version string
+
 	// Logging
 	LogFormat string // json, text
 	LogLevel  string // debug, info, warn, error

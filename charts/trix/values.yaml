@@ -88,6 +88,17 @@ notifications:
     enabled: false
     # -- Webhook URL
     url: ""
+  saas:
+    # -- Enable SaaS platform integration
+    enabled: false
+    # -- SaaS platform API endpoint (e.g., https://app.trixsec.dev)
+    endpoint: ""
+    # -- API key for authentication (use existingSecret for production)
+    apiKey: ""
+    # -- Use existing secret for API key
+    existingSecret: ""
+    # -- Key in existing secret
+    existingSecretKey: "api-key"
 
 # Health probes
 healthCheck:

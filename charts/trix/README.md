@@ -77,6 +77,11 @@ helm uninstall trix -n trix-system
 | livenessProbe.periodSeconds | int | `30` |  |
 | nameOverride | string | `""` | Override the name |
 | nodeSelector | object | `{}` | Node selector |
+| notifications.saas.apiKey | string | `""` | API key for authentication (use existingSecret for production) |
+| notifications.saas.enabled | bool | `false` | Enable SaaS platform integration |
+| notifications.saas.endpoint | string | `""` | SaaS platform API endpoint (e.g., https://app.trixsec.dev) |
+| notifications.saas.existingSecret | string | `""` | Use existing secret for API key |
+| notifications.saas.existingSecretKey | string | `"api-key"` | Key in existing secret |
 | notifications.slack.enabled | bool | `false` | Enable Slack notifications |
 | notifications.slack.existingSecret | string | `""` | Use existing secret for Slack webhook |
 | notifications.slack.existingSecretKey | string | `"webhook-url"` | Key in existing secret |

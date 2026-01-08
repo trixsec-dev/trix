@@ -13,13 +13,18 @@ import (
 
 // VulnerabilityEvent represents a change in vulnerability state.
 type VulnerabilityEvent struct {
-	Type      string // NEW, FIXED
-	CVE       string
-	Workload  string
-	Severity  string
-	Image     string
-	FirstSeen time.Time
-	FixedAt   *time.Time
+	ID              string     `json:"ID"`
+	Type            string     `json:"Type"` // NEW, FIXED
+	CVE             string     `json:"CVE"`
+	Workload        string     `json:"Workload"`
+	Severity        string     `json:"Severity"`
+	Image           string     `json:"Image"` // package:version (legacy)
+	ContainerName   string     `json:"ContainerName,omitempty"`
+	ImageRepository string     `json:"ImageRepository,omitempty"`
+	ImageTag        string     `json:"ImageTag,omitempty"`
+	ImageDigest     string     `json:"ImageDigest,omitempty"`
+	FirstSeen       time.Time  `json:"FirstSeen"`
+	FixedAt         *time.Time `json:"FixedAt,omitempty"`
 }
 
 // Poller periodically scans Trivy CRDs and detects changes.
@@ -75,12 +80,17 @@ func (p *Poller) Poll(ctx context.Context) ([]VulnerabilityEvent, error) {
 
 		if isNew {
 			events = append(events, VulnerabilityEvent{
-				Type:      "NEW",
-				CVE:       record.CVE,
-				Workload:  record.Workload,
-				Severity:  record.Severity,
-				Image:     record.Image,
-				FirstSeen: time.Now(),
+				ID:              record.ID,
+				Type:            "NEW",
+				CVE:             record.CVE,
+				Workload:        record.Workload,
+				Severity:        record.Severity,
+				Image:           record.Image,
+				ContainerName:   record.ContainerName,
+				ImageRepository: record.ImageRepository,
+				ImageTag:        record.ImageTag,
+				ImageDigest:     record.ImageDigest,
+				FirstSeen:       time.Now(),
 			})
 		}
 	}
@@ -92,13 +102,18 @@ func (p *Poller) Poll(ctx context.Context) ([]VulnerabilityEvent, error) {
 	} else {
 		for _, v := range fixed {
 			events = append(events, VulnerabilityEvent{
-				Type:      "FIXED",
-				CVE:       v.CVE,
-				Workload:  v.Workload,
-				Severity:  v.Severity,
-				Image:     v.Image,
-				FirstSeen: v.FirstSeen,
-				FixedAt:   v.FixedAt,
+				ID:              v.ID,
+				Type:            "FIXED",
+				CVE:             v.CVE,
+				Workload:        v.Workload,
+				Severity:        v.Severity,
+				Image:           v.Image,
+				ContainerName:   v.ContainerName,
+				ImageRepository: v.ImageRepository,
+				ImageTag:        v.ImageTag,
+				ImageDigest:     v.ImageDigest,
+				FirstSeen:       v.FirstSeen,
+				FixedAt:         v.FixedAt,
 			})
 		}
 	}
@@ -163,8 +178,9 @@ func (p *Poller) findingToRecord(f trivy.Finding) *VulnerabilityRecord {
 		pkgVersion = raw.InstalledVersion
 	}
 
-	// Create unique ID from CVE + workload + package
-	idHash := sha256.Sum256([]byte(f.ID + workload + pkgName))
+	// Create unique ID from CVE + workload + package + container
+	// Including container ensures same CVE in different containers of same workload are tracked separately
+	idHash := sha256.Sum256([]byte(f.ID + workload + pkgName + f.ContainerName))
 	id := fmt.Sprintf("%x", idHash[:8])
 
 	image := ""
@@ -173,12 +189,16 @@ func (p *Poller) findingToRecord(f trivy.Finding) *VulnerabilityRecord {
 	}
 
 	return &VulnerabilityRecord{
-		ID:       id,
-		CVE:      f.ID,
-		Workload: workload,
-		Severity: string(f.Severity),
-		Image:    image,
-		State:    StateOpen,
+		ID:              id,
+		CVE:             f.ID,
+		Workload:        workload,
+		Severity:        string(f.Severity),
+		Image:           image,
+		ContainerName:   f.ContainerName,
+		ImageRepository: f.ImageRepository,
+		ImageTag:        f.ImageTag,
+		ImageDigest:     f.ImageDigest,
+		State:           StateOpen,
 	}
 }
 

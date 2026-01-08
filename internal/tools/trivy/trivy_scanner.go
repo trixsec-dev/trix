@@ -34,8 +34,22 @@ func (s *TrivyVulnScanner) Scan(ctx context.Context, namespace string) ([]Findin
 		if !ok {
 			continue
 		}
-		name, _ := metadata["name"].(string)
 		ns, _ := metadata["namespace"].(string)
+
+		// Extract labels for workload and container info
+		labels, _ := metadata["labels"].(map[string]interface{})
+		resourceKind, _ := labels["trivy-operator.resource.kind"].(string)
+		resourceName, _ := labels["trivy-operator.resource.name"].(string)
+		containerName, _ := labels["trivy-operator.container.name"].(string)
+
+		// Default to Pod if no kind specified
+		if resourceKind == "" {
+			resourceKind = "Pod"
+		}
+
+		// Extract artifact info (image details)
+		artifact := extractArtifactInfo(report)
+		artifact.ContainerName = containerName
 
 		// Parse vulnerabilities
 		vulns, err := s.client.ParseVulnerabilities(report)
@@ -45,9 +59,31 @@ func (s *TrivyVulnScanner) Scan(ctx context.Context, namespace string) ([]Findin
 
 		// Convert each vulnerability to a Finding
 		for _, v := range vulns {
-			finding := VulnerabilityToFinding(v, ns, name)
+			finding := VulnerabilityToFinding(v, ns, resourceKind, resourceName, artifact)
 			findings = append(findings, finding)
 		}
 	}
 	return findings, nil
+}
+
+// extractArtifactInfo extracts image repository, tag, and digest from a report
+func extractArtifactInfo(report map[string]interface{}) ArtifactInfo {
+	artifact := ArtifactInfo{}
+
+	// Navigate to report.artifact
+	reportData, ok := report["report"].(map[string]interface{})
+	if !ok {
+		return artifact
+	}
+
+	artifactData, ok := reportData["artifact"].(map[string]interface{})
+	if !ok {
+		return artifact
+	}
+
+	artifact.Repository, _ = artifactData["repository"].(string)
+	artifact.Tag, _ = artifactData["tag"].(string)
+	artifact.Digest, _ = artifactData["digest"].(string)
+
+	return artifact
 }
