@@ -370,20 +370,6 @@ func (n *Notifier) SendSaas(ctx context.Context, events []VulnerabilityEvent) *S
 	return result
 }
 
-func (n *Notifier) sendSaasSummary(ctx context.Context, events []VulnerabilityEvent) error {
-	counts := countBySeverity(events)
-	payload := map[string]interface{}{
-		"cluster_name": n.config.ClusterName,
-		"trix_version": n.config.Version,
-		"type":         "initialized",
-		"timestamp":    time.Now().UTC().Format(time.RFC3339),
-		"total":        len(events),
-		"bySeverity":   counts,
-	}
-	url := strings.TrimSuffix(n.config.SaasEndpoint, "/") + "/api/v1/events"
-	return n.postJSONWithAuth(ctx, url, payload)
-}
-
 func (n *Notifier) postJSONWithAuth(ctx context.Context, url string, payload interface{}) error {
 	body, err := json.Marshal(payload)
 	if err != nil {
