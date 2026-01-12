@@ -7,8 +7,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/davealtena/trix/internal/tools/kubectl"
-	"github.com/davealtena/trix/internal/tools/trivy"
+	"github.com/trixsec-dev/trix/internal/tools/kubectl"
+	"github.com/trixsec-dev/trix/internal/tools/trivy"
 )
 
 // VulnerabilityEvent represents a change in vulnerability state.

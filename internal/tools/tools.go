@@ -8,9 +8,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/davealtena/trix/internal/llm"
-	"github.com/davealtena/trix/internal/tools/exposure"
-	"github.com/davealtena/trix/internal/tools/kubectl"
+	"github.com/trixsec-dev/trix/internal/llm"
+	"github.com/trixsec-dev/trix/internal/tools/exposure"
+	"github.com/trixsec-dev/trix/internal/tools/kubectl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

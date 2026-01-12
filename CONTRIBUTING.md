@@ -80,10 +80,10 @@ go tool cover -html=coverage.out
 
 ## Reporting Issues
 
-- Use [GitHub Issues](https://github.com/davealtena/trix/issues) for bugs and feature requests
+- Use [GitHub Issues](https://github.com/trixsec-dev/trix/issues) for bugs and feature requests
 - Include steps to reproduce for bugs
 - Check existing issues before creating a new one
 
 ## Questions?
 
-Start a [Discussion](https://github.com/davealtena/trix/discussions) for questions or ideas.
+Start a [Discussion](https://github.com/trixsec-dev/trix/discussions) for questions or ideas.

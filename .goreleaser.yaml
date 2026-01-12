@@ -37,7 +37,7 @@ archives:
 
 dockers:
   - image_templates:
-      - "ghcr.io/davealtena/trix:{{ .Version }}-amd64"
+      - "ghcr.io/trixsec-dev/trix:{{ .Version }}-amd64"
     use: buildx
     dockerfile: Dockerfile.goreleaser
     build_flag_templates:
@@ -49,7 +49,7 @@ dockers:
     goarch: amd64
 
   - image_templates:
-      - "ghcr.io/davealtena/trix:{{ .Version }}-arm64"
+      - "ghcr.io/trixsec-dev/trix:{{ .Version }}-arm64"
     use: buildx
     dockerfile: Dockerfile.goreleaser
     build_flag_templates:
@@ -61,15 +61,15 @@ dockers:
     goarch: arm64
 
 docker_manifests:
-  - name_template: "ghcr.io/davealtena/trix:{{ .Version }}"
+  - name_template: "ghcr.io/trixsec-dev/trix:{{ .Version }}"
     image_templates:
-      - "ghcr.io/davealtena/trix:{{ .Version }}-amd64"
-      - "ghcr.io/davealtena/trix:{{ .Version }}-arm64"
+      - "ghcr.io/trixsec-dev/trix:{{ .Version }}-amd64"
+      - "ghcr.io/trixsec-dev/trix:{{ .Version }}-arm64"
 
-  - name_template: "ghcr.io/davealtena/trix:latest"
+  - name_template: "ghcr.io/trixsec-dev/trix:latest"
     image_templates:
-      - "ghcr.io/davealtena/trix:{{ .Version }}-amd64"
-      - "ghcr.io/davealtena/trix:{{ .Version }}-arm64"
+      - "ghcr.io/trixsec-dev/trix:{{ .Version }}-amd64"
+      - "ghcr.io/trixsec-dev/trix:{{ .Version }}-arm64"
 
 checksum:
   name_template: "checksums.txt"
@@ -95,7 +95,7 @@ changelog:
 
 release:
   github:
-    owner: davealtena
+    owner: trixsec-dev
     name: trix
   draft: false
   prerelease: auto

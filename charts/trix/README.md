@@ -4,17 +4,17 @@
 
 Kubernetes Security Scanner with AI-Powered Triage and Continuous Monitoring
 
-**Homepage:** <https://github.com/davealtena/trix>
+**Homepage:** <https://github.com/trixsec-dev/trix>
 
 ## Maintainers
 
 | Name | Email | Url |
 | ---- | ------ | --- |
-| Dave Altena |  | <https://github.com/davealtena> |
+| Dave Altena |  | <https://github.com/trixsec-dev> |
 
 ## Source Code
 
-* <https://github.com/davealtena/trix>
+* <https://github.com/trixsec-dev/trix>
 
 ## Prerequisites
 
@@ -25,7 +25,7 @@ Kubernetes Security Scanner with AI-Powered Triage and Continuous Monitoring
 ## Installation
 
 ```bash
-helm repo add trix https://davealtena.github.io/trix
+helm repo add trix https://trixsec-dev.github.io/trix
 helm repo update
 helm install trix trix/trix -n trix-system --create-namespace
 ```
@@ -68,7 +68,7 @@ helm uninstall trix -n trix-system
 | fullnameOverride | string | `""` | Override the full name |
 | healthCheck.port | int | `8080` | Port for health endpoints |
 | image.pullPolicy | string | `"IfNotPresent"` | Image pull policy |
-| image.repository | string | `"ghcr.io/davealtena/trix"` | Image repository |
+| image.repository | string | `"ghcr.io/trixsec-dev/trix"` | Image repository |
 | image.tag | string | `""` | Image tag (defaults to appVersion) |
 | imagePullSecrets | list | `[]` | Image pull secrets |
 | livenessProbe.httpGet.path | string | `"/healthz"` |  |

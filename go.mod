@@ -1,4 +1,4 @@
-module github.com/davealtena/trix
+module github.com/trixsec-dev/trix
 
 go 1.25.0
 

@@ -20,7 +20,7 @@ spec:
         fsGroup: 65534
       containers:
         - name: server
-          image: ghcr.io/davealtena/trix:latest
+          image: ghcr.io/trixsec-dev/trix:latest
           args: ["serve"]
           env:
             - name: POSTGRES_USER

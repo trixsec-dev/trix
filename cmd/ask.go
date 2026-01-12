@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/glamour"
-	"github.com/davealtena/trix/internal/agent"
-	"github.com/davealtena/trix/internal/llm"
 	"github.com/spf13/cobra"
+	"github.com/trixsec-dev/trix/internal/agent"
+	"github.com/trixsec-dev/trix/internal/llm"
 )
 
 var (

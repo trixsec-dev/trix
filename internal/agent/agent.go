@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/davealtena/trix/internal/llm"
-	"github.com/davealtena/trix/internal/tools"
+	"github.com/trixsec-dev/trix/internal/llm"
+	"github.com/trixsec-dev/trix/internal/tools"
 )
 
 const systemPrompt = `You are a Kubernetes security investigator. You help users understand security findings in their clusters.

@@ -8,10 +8,10 @@
   </p>
 
   <p>
-    <a href="https://go.dev/"><img src="https://img.shields.io/github/go-mod/go-version/davealtena/trix" alt="Go Version"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/github/license/davealtena/trix" alt="License"></a>
-    <a href="https://goreportcard.com/report/github.com/davealtena/trix"><img src="https://goreportcard.com/badge/github.com/davealtena/trix" alt="Go Report Card"></a>
-    <a href="https://github.com/davealtena/trix/releases"><img src="https://img.shields.io/github/v/release/davealtena/trix?include_prereleases" alt="Release"></a>
+    <a href="https://go.dev/"><img src="https://img.shields.io/github/go-mod/go-version/trixsec-dev/trix" alt="Go Version"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/github/license/trixsec-dev/trix" alt="License"></a>
+    <a href="https://goreportcard.com/report/github.com/trixsec-dev/trix"><img src="https://goreportcard.com/badge/github.com/trixsec-dev/trix" alt="Go Report Card"></a>
+    <a href="https://github.com/trixsec-dev/trix/releases"><img src="https://img.shields.io/github/v/release/trixsec-dev/trix?include_prereleases" alt="Release"></a>
   </p>
 
   <p>
@@ -86,7 +86,7 @@ helm install trivy-operator aqua/trivy-operator \
 **From source:**
 
 ```bash
-git clone https://github.com/davealtena/trix.git
+git clone https://github.com/trixsec-dev/trix.git
 cd trix
 go build -o trix .
 sudo mv trix /usr/local/bin/
@@ -95,7 +95,7 @@ sudo mv trix /usr/local/bin/
 **Container image:**
 
 ```bash
-docker run --rm -v ~/.kube:/home/nonroot/.kube:ro ghcr.io/davealtena/trix:latest status
+docker run --rm -v ~/.kube:/home/nonroot/.kube:ro ghcr.io/trixsec-dev/trix:latest status
 ```
 
 **Verify installation:**
@@ -314,7 +314,7 @@ See [deploy/README.md](deploy/README.md) for Kubernetes deployment with Kustomiz
 A Helm chart is available for easy deployment:
 
 ```bash
-helm repo add trix https://davealtena.github.io/trix
+helm repo add trix https://trixsec-dev.github.io/trix
 helm install trix trix/trix -n trix-system --create-namespace
 ```
 
@@ -330,8 +330,8 @@ See [charts/trix/README.md](charts/trix/README.md) for full configuration option
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
-- [Open an issue](https://github.com/davealtena/trix/issues) for bugs or feature requests
-- [Start a discussion](https://github.com/davealtena/trix/discussions) for questions or ideas
+- [Open an issue](https://github.com/trixsec-dev/trix/issues) for bugs or feature requests
+  - [Start a discussion](https://github.com/trixsec-dev/trix/discussions) for questions or ideas
 
 ## License
 

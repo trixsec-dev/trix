@@ -1,6 +1,6 @@
 package main
 
-import "github.com/davealtena/trix/cmd"
+import "github.com/trixsec-dev/trix/cmd"
 
 func main() {
 	cmd.Execute()

@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/davealtena/trix/internal/tools/kubectl"
-	"github.com/davealtena/trix/internal/tools/trivy"
-	"github.com/davealtena/trix/internal/ui"
 	"github.com/spf13/cobra"
+	"github.com/trixsec-dev/trix/internal/tools/kubectl"
+	"github.com/trixsec-dev/trix/internal/tools/trivy"
+	"github.com/trixsec-dev/trix/internal/ui"
 )
 
 var (

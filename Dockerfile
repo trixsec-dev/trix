@@ -21,7 +21,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-amd64} \
 FROM gcr.io/distroless/static-debian12:nonroot
 
 # Labels following OCI image spec
-LABEL org.opencontainers.image.source="https://github.com/davealtena/trix"
+LABEL org.opencontainers.image.source="https://github.com/trixsec-dev/trix"
 LABEL org.opencontainers.image.description="Kubernetes Security Scanner with AI-Powered Triage"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 

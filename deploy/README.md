@@ -27,13 +27,13 @@ Or use your preferred secret management (External Secrets, Sealed Secrets, etc.)
 ### 2. Deploy
 
 ```bash
-kubectl apply -k github.com/davealtena/trix/deploy
+kubectl apply -k github.com/trixsec-dev/trix/deploy
 ```
 
 Or clone and customize:
 
 ```bash
-git clone https://github.com/davealtena/trix.git
+git clone https://github.com/trixsec-dev/trix.git
 cd trix/deploy
 
 # Edit server.yaml to configure notifications

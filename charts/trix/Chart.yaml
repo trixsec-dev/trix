@@ -4,12 +4,12 @@ description: Kubernetes Security Scanner with AI-Powered Triage and Continuous M
 type: application
 version: 0.2.0
 appVersion: "0.2.0"
-home: https://github.com/davealtena/trix
+home: https://github.com/trixsec-dev/trix
 sources:
-  - https://github.com/davealtena/trix
+  - https://github.com/trixsec-dev/trix
 maintainers:
   - name: Dave Altena
-    url: https://github.com/davealtena
+    url: https://github.com/trixsec-dev
 keywords:
   - security
   - kubernetes

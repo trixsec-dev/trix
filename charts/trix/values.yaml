@@ -3,7 +3,7 @@ replicaCount: 1
 
 image:
   # -- Image repository
-  repository: ghcr.io/davealtena/trix
+  repository: ghcr.io/trixsec-dev/trix
   # -- Image pull policy
   pullPolicy: IfNotPresent
   # -- Image tag (defaults to appVersion)

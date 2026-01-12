@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/davealtena/trix/internal/server"
 	"github.com/spf13/cobra"
+	"github.com/trixsec-dev/trix/internal/server"
 )
 
 var serveCmd = &cobra.Command{
