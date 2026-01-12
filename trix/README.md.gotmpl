@@ -1,0 +1,99 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.deprecationWarning" . }}
+
+{{ template "chart.badgesSection" . }}
+
+{{ template "chart.description" . }}
+
+{{ template "chart.homepageLine" . }}
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.sourcesSection" . }}
+
+## Prerequisites
+
+- Kubernetes 1.19+
+- Helm 3.2+
+- [Trivy Operator](https://aquasecurity.github.io/trivy-operator/) installed in your cluster
+
+## Installation
+
+```bash
+helm repo add trix https://trixsec-dev.github.io/trix-helm
+helm repo update
+helm install trix trix/trix -n trix-system --create-namespace
+```
+
+### With Slack notifications
+
+```bash
+helm install trix trix/trix -n trix-system --create-namespace \
+  --set notifications.slack.enabled=true \
+  --set notifications.slack.webhookUrl="https://hooks.slack.com/services/..."
+```
+
+### With external PostgreSQL
+
+```bash
+helm install trix trix/trix -n trix-system --create-namespace \
+  --set postgresql.enabled=false \
+  --set postgresql.external.host=my-postgres.example.com \
+  --set postgresql.external.user=trix \
+  --set postgresql.external.password=secret \
+  --set postgresql.external.database=trix
+```
+
+## Uninstallation
+
+```bash
+helm uninstall trix -n trix-system
+```
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}
+
+## Configuration Examples
+
+### Minimal configuration
+
+```yaml
+notifications:
+  slack:
+    enabled: true
+    webhookUrl: "https://hooks.slack.com/services/..."
+```
+
+### Production configuration
+
+```yaml
+config:
+  pollInterval: "5m"
+  minSeverity: "HIGH"
+  namespaces: "production,staging"
+
+notifications:
+  slack:
+    enabled: true
+    existingSecret: "my-slack-secret"
+    existingSecretKey: "webhook-url"
+
+postgresql:
+  enabled: false
+  external:
+    host: "postgres.example.com"
+    existingSecret: "my-postgres-secret"
+    sslMode: "require"
+
+resources:
+  requests:
+    memory: 128Mi
+    cpu: 100m
+  limits:
+    memory: 512Mi
+    cpu: 500m
+```
+
+{{ template "helm-docs.versionFooter" . }}

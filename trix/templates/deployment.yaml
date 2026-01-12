@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "trix.fullname" . }}
+  labels:
+    {{- include "trix.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "trix.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "trix.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "trix.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["serve"]
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "trix.postgresql.secretName" . }}
+                  key: {{ if .Values.postgresql.external.existingSecret }}{{ .Values.postgresql.external.existingSecretUserKey }}{{ else }}username{{ end }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "trix.postgresql.secretName" . }}
+                  key: {{ if .Values.postgresql.external.existingSecret }}{{ .Values.postgresql.external.existingSecretPasswordKey }}{{ else }}password{{ end }}
+            - name: TRIX_DATABASE_URL
+              value: {{ include "trix.databaseUrl" . | quote }}
+            - name: TRIX_POLL_INTERVAL
+              value: {{ .Values.config.pollInterval | quote }}
+            {{- if .Values.config.namespaces }}
+            - name: TRIX_NAMESPACES
+              value: {{ .Values.config.namespaces | quote }}
+            {{- end }}
+            - name: TRIX_NOTIFY_SEVERITY
+              value: {{ .Values.config.minSeverity | quote }}
+            - name: TRIX_LOG_FORMAT
+              value: {{ .Values.config.logFormat | quote }}
+            - name: TRIX_LOG_LEVEL
+              value: {{ .Values.config.logLevel | quote }}
+            {{- if .Values.notifications.slack.enabled }}
+            - name: TRIX_NOTIFY_SLACK
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.notifications.slack.existingSecret | default (printf "%s-slack" (include "trix.fullname" .)) }}
+                  key: {{ .Values.notifications.slack.existingSecretKey | default "webhook-url" }}
+            {{- end }}
+            {{- if .Values.notifications.webhook.enabled }}
+            - name: TRIX_NOTIFY_WEBHOOK
+              value: {{ .Values.notifications.webhook.url | quote }}
+            {{- end }}
+            {{- if .Values.notifications.saas.enabled }}
+            - name: TRIX_SAAS_ENDPOINT
+              value: {{ .Values.notifications.saas.endpoint | quote }}
+            - name: TRIX_SAAS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.notifications.saas.existingSecret | default (printf "%s-saas" (include "trix.fullname" .)) }}
+                  key: {{ .Values.notifications.saas.existingSecretKey | default "api-key" }}
+            {{- end }}
+          ports:
+            - name: health
+              containerPort: {{ .Values.healthCheck.port }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
